@@ -34,7 +34,7 @@ PlasmoidItem {
 
     readonly property bool shouldShrinkToZero: tasksModel.count === 0
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
-    readonly property bool iconsOnly: Plasmoid.pluginName === "org.kde.plasma.icontasks"
+    readonly property bool iconsOnly: Plasmoid.pluginName === "org.kde.taskmanagerosx"
 
     property Task toolTipOpenedByClick
     property Task toolTipAreaItem

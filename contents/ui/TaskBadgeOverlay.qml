@@ -13,7 +13,7 @@ Item {
     id: root
 
     readonly property int iconWidthDelta: (icon.width - icon.paintedWidth) / 2
-    readonly property bool shiftBadgeDown: (Plasmoid.pluginName === "org.kde.plasma.icontasks") && task.audioStreamIcon !== null
+    readonly property bool shiftBadgeDown: (Plasmoid.pluginName === "org.kde.taskmanagerosx") && task.audioStreamIcon !== null
 
     Item {
         id: badgeMask
