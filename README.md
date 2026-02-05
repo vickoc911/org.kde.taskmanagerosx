@@ -1,2 +1,3 @@
 # org.kde.taskmanagerosx
-Task Manager App bar displaying only icons with zoom like OSX
+I haven't uploaded the code yet. This is still the default task manager for KDE 6.5.
+
