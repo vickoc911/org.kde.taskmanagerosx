@@ -48,7 +48,33 @@ PlasmoidItem {
 
     preferredRepresentation: fullRepresentation
 
-    Plasmoid.constraintHints: Plasmoid.CanFillArea
+    // --- LÓGICA DE TRANSPARENCIA ---
+    property Item containmentItem: null
+    readonly property int depth: 14
+    property bool isBackgroundDisabled: true
+
+    function lookForContainer(object, tries) {
+        if (tries === 0 || object === null) return;
+        // Esta es la línea clave que dijiste que funciona
+        if (object.toString().indexOf("ContainmentItem_QML") > -1) {
+            tasks.containmentItem = object;
+            console.log("Contenedor encontrado en el intento: " + (depth - tries));
+        } else {
+            lookForContainer(object.parent, tries - 1);
+        }
+    }
+
+    function applyBackgroundHint() {
+        if (tasks.containmentItem === null) lookForContainer(tasks.parent, depth);
+        if (tasks.containmentItem === null) return;
+
+        // Aplicamos el NoBackground (0) o Default (1)
+        tasks.containmentItem.Plasmoid.backgroundHints = (isBackgroundDisabled) ? 0 : 1;
+
+        // También lo aplicamos al objeto raíz por si acaso
+        tasks.Plasmoid.backgroundHints = (isBackgroundDisabled) ? 0 : 1;
+    }
+
 
     Plasmoid.onUserConfiguringChanged: {
         if (Plasmoid.userConfiguring && groupDialog !== null) {
@@ -229,6 +255,8 @@ PlasmoidItem {
             launcherList = Plasmoid.configuration.launchers;
             groupingAppIdBlacklist = Plasmoid.configuration.groupingAppIdBlacklist;
             groupingLauncherUrlBlacklist = Plasmoid.configuration.groupingLauncherUrlBlacklist;
+            // hacer panel transparente
+            applyBackgroundHint();
 
             // Only hook up view only after the above churn is done.
             taskRepeater.model = tasksModel;
@@ -654,5 +682,25 @@ PlasmoidItem {
 
     Component.onDestruction: {
         TaskTools.taskManagerInstanceCount -= 1;
+    }
+    // para hacer panel transparente
+    Timer {
+        id: initializeAppletTimer
+        interval: 1200
+        repeat: true // Lo hacemos repetir hasta que encuentre el contenedor
+        running: true
+
+        property int step: 0
+        readonly property int maxStep: 5
+
+        onTriggered: {
+            console.log("Intento de transparencia número: " + (step + 1));
+            applyBackgroundHint();
+
+            if (tasks.containmentItem !== null || step >= maxStep) {
+                stop(); // Se detiene cuando lo logra o alcanza el límite
+            }
+            step++;
+        }
     }
 }

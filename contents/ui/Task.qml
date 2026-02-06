@@ -681,7 +681,6 @@ PlasmaCore.ToolTipArea {
             clip: true
             opacity: 0.5
             z: -1
-            // visible: icon.visible
             visible: true
 
             Kirigami.Icon {
