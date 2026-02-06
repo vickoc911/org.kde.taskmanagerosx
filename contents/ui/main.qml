@@ -410,109 +410,184 @@ PlasmoidItem {
 
             edge: {
                 switch (Plasmoid.location) {
-                case PlasmaCore.Types.BottomEdge:
-                    return Qt.TopEdge;
-                case PlasmaCore.Types.TopEdge:
-                    return Qt.BottomEdge;
-                case PlasmaCore.Types.LeftEdge:
-                    return Qt.RightEdge;
-                case PlasmaCore.Types.RightEdge:
-                    return Qt.LeftEdge;
-                default:
-                    return Qt.TopEdge;
+                    case PlasmaCore.Types.BottomEdge: return Qt.TopEdge;
+                    case PlasmaCore.Types.TopEdge: return Qt.BottomEdge;
+                    case PlasmaCore.Types.LeftEdge: return Qt.RightEdge;
+                    case PlasmaCore.Types.RightEdge: return Qt.LeftEdge;
+                    default: return Qt.TopEdge;
                 }
             }
 
-            LayoutMirroring.enabled: tasks.shouldBeMirrored(Plasmoid.configuration.reverseMode, Qt.application.layoutDirection, vertical)
+            // IMPORTANTE: Quitamos las anclas fijas para que el panel pueda centrarse
+            height: taskList.height
+            width: taskList.width
             anchors {
                 left: parent.left
                 top: parent.top
+                // --- AÑADE ESTA LÍNEA ---
+                //  topMargin: + 5  // Esto baja o sube los iconos
+                // ------------------------
             }
 
-            height: taskList.height
-            width: taskList.width
+            anchors.centerIn: parent // Esto centra el Dock en el panel
 
-            TaskList {
+
+            // Cambiamos el tipo a Item para que nos deje mover los X manualmente
+            Item {
                 id: taskList
+                //   anchors.centerIn: parent // Esto centra el Dock en el panel
 
-                LayoutMirroring.enabled: tasks.shouldBeMirrored(Plasmoid.configuration.reverseMode, Qt.application.layoutDirection, vertical)
-                anchors {
-                    left: parent.left
-                    top: parent.top
-                }
-
-
-                // 1. Definimos un ancho base para cada icono (puedes ajustar el 48)
-                readonly property int cellWidth: 60
-
-                readonly property real widthOccupation: taskRepeater.count / columns
-                readonly property real heightOccupation: taskRepeater.count / rows
-
-                // 2. Forzamos que el ancho máximo sea simplemente: (iconos * ancho base)
-                Layout.maximumWidth: {
-                    if (tasks.vertical) return tasks.width;
-                    // Esto asegura que el Layout nunca pida más espacio del necesario para estar "juntitos"
-                    return (taskRepeater.count * cellWidth);
-                }
-
-                Layout.maximumHeight: {
-                    const totalMaxHeight = children.reduce((accumulator, child) => {
-                        if (!isFinite(child.Layout.maximumHeight)) return accumulator;
-                        return accumulator + child.Layout.maximumHeight
-                    }, 0);
-                    return Math.round(totalMaxHeight / heightOccupation);
-                }
-
-                // 3. Ajustamos el ancho real para que no se estire
-                width: {
-                    if (tasks.shouldShrinkToZero) return 0;
-                    if (tasks.vertical) {
-                        return tasks.width * Math.min(1, widthOccupation);
-                    } else {
-                        // Retornamos el ancho justo para que estén pegados
-                        return Math.min(tasks.width, Layout.maximumWidth);
-                    }
-                }
-
-                height: {
-                    if (tasks.shouldShrinkToZero) return 0;
-                    if (tasks.vertical) {
-                        return Math.min(tasks.height, Layout.maximumHeight);
-                    } else {
-                        // Mantenemos el alto del panel (90px) para permitir el zoom y reflejo
-                        return tasks.height;
-                    }
-                }
-
-                flow: {
-                    if (tasks.vertical) {
-                        return Plasmoid.configuration.forceStripes ? Grid.LeftToRight : Grid.TopToBottom
-                    }
-                    return Plasmoid.configuration.forceStripes ? Grid.TopToBottom : Grid.LeftToRight
-                }
-
-                onAnimatingChanged: {
-                    if (!animating) {
-                        tasks.publishIconGeometries(children, tasks);
-                    }
-                }
-
-                Repeater {
-                    id: taskRepeater
-
-                    delegate: Task {
-                        tasksRoot: tasks
-                    }
-                    onItemRemoved: (index, item) => {
-                        if (tasks.containsMouse && index !== taskRepeater.count &&
-                            item.model.WinIdList.length > 0 &&
-                            taskClosedWithMouseMiddleButton.includes(item.winIdList[0])) {
-                            needLayoutRefresh = true;
-                        }
-                        taskClosedWithMouseMiddleButton = [];
-                    }
-                }
+                // Optimizado: Solo se actualiza cuando el repeater termina o cambia el conteo
+                /*     width: taskRepeater.count * (76)  // 76 altura del panel
+                 *           height: tasks.height
+                 *
+                 *           Layout.preferredWidth: {
+                 *               let total = 0;
+                 *               for (let i = 0; i < taskRepeater.count; ++i) {
+                 *                   let item = taskRepeater.itemAt(i);
+                 *                   if (item) total += item.width;
             }
+            return total + 10;
+            } */
+                /*  width: {
+                 *         let total = 20; // Margen inicial/final
+                 *         for (let i = 0; i < taskRepeater.count; ++i) {
+                 *             let item = taskRepeater.itemAt(i);
+                 *             if (item) total += item.width;
+            }
+            return total;
+            } */
+                /*  width: {
+                 *           let total = 0;
+                 *           for (let i = 0; i < taskRepeater.count; ++i) {
+                 *               let item = taskRepeater.itemAt(i);
+                 *               if (item) total += item.width;
+            }
+            return total + 16;
+            } */
+
+                // Añade esto justo debajo de width para suavizar el estiramiento del panel
+                /*  Behavior on width {
+                 *           NumberAnimation {
+                 *               duration: 150
+                 *               easing.type: Easing.OutCubic
+            }
+            } */
+
+                //  height: tasks.height
+
+                // Informamos a Plasma que el tamaño ha cambiado para que estire el fondo
+                //  Layout.preferredWidth: width
+                //    Layout.maximumWidth: width
+                // IMPORTANTE: Esto centra el dock en el panel de Plasma
+                //  anchors.horizontalCenter: parent.horizontalCenter
+
+                // main.qml
+
+                width: taskRepeater.count * (66)  // 10 menos que la  altura del panel
+                height: tasks.height
+
+                // 2. Calculamos el ancho real de todos los iconos sumados
+                readonly property real iconsTotalWidth: {
+                    let total = 0;
+                    for (let i = 0; i < taskRepeater.count; ++i) {
+                        let item = taskRepeater.itemAt(i);
+                        if (item) total += item.width;
+                    }
+                    return total;
+                }
+
+                // 3. El desplazamiento necesario para centrar el bloque
+                readonly property real centerOffset: (width - iconsTotalWidth) / 2
+
+                Layout.maximumWidth: width
+
+                // 1. Este es el MouseArea que detecta el movimiento en todo el dock
+                MouseArea {
+                    id: dockMouseArea  // <--- Asegúrate de que tenga este ID
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    propagateComposedEvents: true
+
+                    Repeater {
+                        id: taskRepeater
+                        model: tasksModel
+
+                        delegate: Task {
+                            id: taskItem
+                            tasksRoot: tasks
+                            // Pasamos la referencia si es necesario
+                            dockRef: dockMouseArea
+
+                            x: {
+                                let posX = taskList.centerOffset; // Empezamos en el centro calculado
+                                for (let i = 0; i < index; ++i) {
+                                    let previousItem = taskRepeater.itemAt(i);
+                                    // Si el item anterior existe, sumamos su ancho.
+                                    // Si no, sumamos el ancho base estimado (60) para que no se encimen.
+                                    posX += (previousItem ? previousItem.width : 60);
+                                }
+                                return posX;
+                            }
+
+                            width: (44 * zoomFactor) + 16
+
+                            // main.qml -> Repeater -> delegate: Task
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                propagateComposedEvents: true
+
+                                onEntered: {
+                                    // RESET TOTAL: Apagamos el hover de todos antes de encender este
+                                    for (let i = 0; i < taskRepeater.count; ++i) {
+                                        let item = taskRepeater.itemAt(i);
+                                        if (item) item.isHovered = false;
+                                    }
+
+                                    taskItem.isHovered = true;
+                                    // Sincronizamos el item del tooltip
+                                    tasks.toolTipAreaItem = taskItem;
+                                }
+
+                                onExited: {
+                                    taskItem.isHovered = false;
+                                }
+
+                                // Si haces click, que pase el evento al icono
+                                onPressed: (mouse) => { mouse.accepted = false }
+                            }
+                        }
+
+                    }
+                }
+            } // Fin de taskList (Item)
+
+            /*  MouseArea {
+             *       id: dockMouseArea
+             *       anchors.fill: taskList
+             *       hoverEnabled: true
+             *       z: 999
+             *       propagateComposedEvents: true
+             *
+             *       onPositionChanged: (mouse) => {
+             *           // childAt busca qué icono está bajo el mouse en esa X
+             *         //  var targetTask = taskList.childAt(mouse.x, mouse.y);
+             *         //  if (targetTask && targetTask.updateMainItemBindings) {
+             *          //     targetTask.updateMainItemBindings();
+             *         //  }
+        }
+
+        onExited: {
+        if (tasks.toolTipAreaItem) {
+            tasks.toolTipAreaItem.hideToolTip();
+        }
+        }
+
+        onPressed: (mouse) => { mouse.accepted = false }
+        onReleased: (mouse) => { mouse.accepted = false }
+        onClicked: (mouse) => { mouse.accepted = false }
+        } */
         }
     }
 

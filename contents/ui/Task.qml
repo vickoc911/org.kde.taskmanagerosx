@@ -74,14 +74,80 @@ PlasmaCore.ToolTipArea {
     readonly property bool playingAudio: hasAudioStream && audioStreams.some(item => !item.corked)
     readonly property bool muted: hasAudioStream && audioStreams.every(item => item.muted)
 
-    readonly property bool highlighted: (inPopup && activeFocus) || (!inPopup && containsMouse)
-        || (task.contextMenu && task.contextMenu.status === PlasmaExtras.Menu.Open)
-        || (!!tasksRoot.groupDialog && tasksRoot.groupDialog.visualParent === task)
+    // Esta propiedad la activamos desde el MouseArea del main.qml
+    property bool isHovered: false
 
-    active: !inPopup && !tasksRoot.groupDialog && task.contextMenu?.status !== PlasmaExtras.Menu.Open
-    interactive: model.IsWindow || mainItem.playerData
-    location: Plasmoid.location
+    property Item dockRef: null // Esto recibirá el 'dockMouseArea' de main.qml
+
+    // Si el zoom es mayor a 1.01, asumimos que el ratón está "encima" para efectos de UI
+    readonly property bool highlighted: (inPopup && activeFocus)
+    || (!inPopup && (containsMouse || zoomFactor > 1.01))
+    || (task.contextMenu && task.contextMenu.status === PlasmaExtras.Menu.Open)
+    || (!!tasksRoot.groupDialog && tasksRoot.groupDialog.visualParent === task)
+
+    active: !inPopup && isHovered // Solo activo si el MouseArea de main.qml dice que hay hover
+    interactive: model.IsWindow || (mainItem && mainItem.playerData)
+    location: tasksRoot.location // Usa la ubicación del raíz, que es estable
     mainItem: !Plasmoid.configuration.showToolTips || !model.IsWindow ? pinnedAppToolTipDelegate : openWindowToolTipDelegate
+
+    // El ancho de la tarea crece con el zoom, lo que empuja el Layout
+    // y hace que el panel se expanda elásticamente.
+    width: 44
+    height: tasksRoot.height
+
+    // Desactivamos el recorte para que el zoom y el reflejo "vuelen" fuera
+    clip: false
+
+    // ---------------------------------------------------------
+    // INICIO DEL CÓDIGO ZOOM (OSX EFFECT)
+    // ---------------------------------------------------------
+    property real zoomFactor: {
+        // Si no hay referencia al dock o el mouse no está sobre el dock, reset a 1.0
+        if (!dockRef || !dockRef.containsMouse) return 1.0;
+
+        // Calculamos la posición X del centro de este icono relativa al dock entero
+        // Importante: usamos 'task' (el ID del ToolTipArea) para mapear
+        let centerInDock = task.mapToItem(dockRef, 24, 0).x;
+
+        let mouseXInDock = dockRef.mouseX;
+        let distance = Math.abs(mouseXInDock - centerInDock);
+
+        // Si el mouse está a más de 180px, no hay efecto
+        if (distance > 180) return 1.0;
+
+        // Curva de Gauss para el efecto tipo Mac
+        let amplitude = 0.9; // Cuánto crece (0.9 = 90% más grande)
+        let sigma = 50;      // Qué tan ancho es el grupo de iconos que se agrandan
+
+        let gauss = amplitude * Math.exp(-(Math.pow(distance, 2) / (2 * Math.pow(sigma, 2))));
+
+        return 1.0 + gauss;
+    }
+
+    // Mantenemos el Behavior para que la transición al salir del dock sea suave
+    Behavior on zoomFactor {
+        NumberAnimation {
+            duration: 100
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    // Manejo del tooltip en el zoom
+    onZoomFactorChanged: {
+        // Solo actuamos si hay un cambio significativo
+        if (zoomFactor > 1.1) {
+            if (!task.toolTipOpen && isHovered) {
+                // Eliminamos task.showToolTip() de aquí, Plasma lo hará solo
+                task.updateMainItemBindings();
+            }
+        } else if (zoomFactor <= 1.05 && task.toolTipOpen) {
+            // task.hideToolTip(); // Deja que Plasma maneje el cierre
+        }
+    }
+
+    // ---------------------------------------------------------
+    // FIN DE LÓGICA
+    // ---------------------------------------------------------
 
     onXChanged: {
         if (!completed) {
@@ -116,13 +182,13 @@ PlasmaCore.ToolTipArea {
         id: moveAnim
         property real x
         property real y
-        onRunningChanged: {
+       /* onRunningChanged: {
             if (running) {
                 ++task.parent.animationsRunning;
             } else {
                 --task.parent.animationsRunning;
             }
-        }
+        } */
         ParallelAnimation {
             NumberAnimation {
                 target: translateTransform
@@ -341,36 +407,24 @@ PlasmaCore.ToolTipArea {
 
     // Will also be called in activateTaskAtIndex(index)
     function updateMainItemBindings(): void {
-        if ((mainItem.parentTask === this && mainItem.rootIndex.row === index)
-            || (tasksRoot.toolTipOpenedByClick === null && !active)
-            || (tasksRoot.toolTipOpenedByClick !== null && tasksRoot.toolTipOpenedByClick !== this)) {
+        // Si ya somos el item activo, abortamos para evitar el Stack Overflow
+        if (tasksRoot.toolTipAreaItem === task && mainItem.parentTask === task) {
             return;
         }
 
-        mainItem.blockingUpdates = (mainItem.isGroup !== model.IsGroupParent); // BUG 464597 Force unload the previous component
+        mainItem.blockingUpdates = true;
 
-        mainItem.parentTask = this;
+        // Asignaciones directas (sin Qt.binding para evitar recursividad)
+        mainItem.parentTask = task;
         mainItem.rootIndex = tasksModel.makeModelIndex(index, -1);
+        mainItem.appName = model.AppName;
+        mainItem.display = model.display;
+        mainItem.icon = model.decoration;
+        mainItem.windows = model.WinIdList;
+        mainItem.isLauncher = model.IsLauncher;
 
-        mainItem.appName = Qt.binding(() => model.AppName);
-        mainItem.pidParent = Qt.binding(() => model.AppPid);
-        mainItem.windows = Qt.binding(() => model.WinIdList);
-        mainItem.isGroup = Qt.binding(() => model.IsGroupParent);
-        mainItem.icon = Qt.binding(() => model.decoration);
-        mainItem.launcherUrl = Qt.binding(() => model.LauncherUrlWithoutIcon);
-        mainItem.isLauncher = Qt.binding(() => model.IsLauncher);
-        mainItem.isMinimized = Qt.binding(() => model.IsMinimized);
-        mainItem.display = Qt.binding(() => model.display);
-        mainItem.genericName = Qt.binding(() => model.GenericName);
-        mainItem.virtualDesktops = Qt.binding(() => model.VirtualDesktops);
-        mainItem.isOnAllVirtualDesktops = Qt.binding(() => model.IsOnAllVirtualDesktops);
-        mainItem.activities = Qt.binding(() => model.Activities);
-
-        mainItem.smartLauncherCountVisible = Qt.binding(() => smartLauncherItem?.countVisible ?? false);
-        mainItem.smartLauncherCount = Qt.binding(() => mainItem.smartLauncherCountVisible ? (smartLauncherItem?.count ?? 0) : 0);
-
+        tasksRoot.toolTipAreaItem = task;
         mainItem.blockingUpdates = false;
-        tasksRoot.toolTipAreaItem = this;
     }
 
     Connections {
@@ -530,20 +584,30 @@ PlasmaCore.ToolTipArea {
     Loader {
         id: iconBox
 
-        anchors {
-            left: parent.left
-            leftMargin: adjustMargin(true, parent.width, taskFrame.margins.left)
-            top: parent.top
-            topMargin: adjustMargin(false, parent.height, taskFrame.margins.top)
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenterOffset: -5
+        anchors.bottomMargin: 0
+
+        // Mantenemos el contenedor con un tamaño fijo
+        width: 44
+        height: 44
+
+        // El zoom se aplica solo como transformación visual al contenedor completo
+        scale: zoomFactor
+        transformOrigin: Item.Bottom
+
+        Behavior on scale {
+            NumberAnimation {
+                duration: 100 // Un poco más de tiempo evita el efecto "vibración"
+                easing.type: Easing.OutQuad // Más suave para transformaciones constantes
+            }
         }
 
-        width: task.inPopup ? Math.max(Kirigami.Units.iconSizes.sizeForLabels, Kirigami.Units.iconSizes.medium) : Math.min(task.parent?.minimumWidth ?? 0, task.height)
-        height: task.inPopup ? width : (parent.height - adjustMargin(false, parent.height, taskFrame.margins.top)
-                 - adjustMargin(false, parent.height, taskFrame.margins.bottom))
+        z: 100
 
         asynchronous: true
-        active: height >= Kirigami.Units.iconSizes.small
-                && task.smartLauncherItem && task.smartLauncherItem.countVisible
+        active: task.smartLauncherItem && task.smartLauncherItem.countVisible
         source: "TaskBadgeOverlay.qml"
 
         function adjustMargin(isVertical: bool, size: real, margin: real): real {
@@ -562,13 +626,22 @@ PlasmaCore.ToolTipArea {
 
         Kirigami.Icon {
             id: icon
+            width: 44
+            height: 44
 
-            anchors.fill: parent
+            implicitWidth: width
+            implicitHeight: height
 
+            // usamos para asegurar rendimiento
+            smooth: true
+            antialiasing: true
+
+            // Esto ayuda a que Plasma no re-renderice innecesariamente
             active: task.highlighted
-            enabled: true
-
             source: model.decoration
+
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
         }
 
         states: [
@@ -588,16 +661,53 @@ PlasmaCore.ToolTipArea {
                     target: iconBox
                     anchors.leftMargin: 0
                     width: Math.min(task.parent.minimumWidth, tasks.height)
-                        - adjustMargin(true, task.width, taskFrame.margins.left)
-                        - adjustMargin(true, task.width, taskFrame.margins.right)
+                    - adjustMargin(true, task.width, taskFrame.margins.left)
+                    - adjustMargin(true, task.width, taskFrame.margins.right)
                 }
             }
         ]
 
+        // Reflejo de iconos optimizado
+        Item {
+            id: reflectionContainer
+            // El reflejo nace de la base del icono fijo
+            anchors.top: icon.bottom
+            anchors.horizontalCenter: icon.horizontalCenter
+            anchors.horizontalCenterOffset: -4
+
+            // Tamaño fijo para el reflejo
+            width: 44
+            height: 22
+            clip: true
+            opacity: 0.5
+            z: -1
+            // visible: icon.visible
+            visible: true
+
+            Kirigami.Icon {
+                id: reflectionIcon
+                width: 44
+                height: 44
+                // Usamos el mismo source con caché
+                source: icon.source
+                // cache: true
+                active: icon.active
+                smooth: true
+
+                y: -height
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                transform: Scale {
+                    yScale: -1
+                    origin.y: 44
+                }
+            }
+        }
+
         Loader {
             anchors.centerIn: parent
-            width: Math.min(parent.width, parent.height)
-            height: width
+            width: 44
+            height: 44
             active: model.IsStartup
             sourceComponent: busyIndicator
         }
@@ -606,8 +716,7 @@ PlasmaCore.ToolTipArea {
     PlasmaComponents3.Label {
         id: label
 
-        visible: (inPopup || !iconsOnly && !model.IsLauncher
-            && (parent.width - iconBox.height - Kirigami.Units.smallSpacing) >= LayoutMetrics.spaceRequiredToShowText())
+        visible: (inPopup || !tasksRoot.iconsOnly) && zoomFactor > 1.05
 
         anchors {
             fill: parent
@@ -691,6 +800,11 @@ PlasmaCore.ToolTipArea {
         if (!inPopup && !model.IsWindow) {
             taskInitComponent.createObject(task);
         }
+        // Forzamos la localización de Plasma al inicio
+        if (tasksRoot && tasksRoot.plasmoid) {
+            task.location = tasksRoot.plasmoid.location;
+        }
+
         completed = true;
     }
     Component.onDestruction: {
