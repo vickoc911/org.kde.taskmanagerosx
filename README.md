@@ -1,5 +1,17 @@
-# org.kde.wavetask
+# org.kde.plasma.wavetask
 It still has many bugs, but it more or less works. It's based on the default task manager of KDE 6.5.
+
+Features:
+
+- Zoom like in macOS
+- Icon mirroring
+- Basic skin system
+
+What doesn't work:
+- For now, it only works in the bottom position
+- Currently, icons are fixed at 44 pixels
+- The panel has been resized to 76 pixels so that icons aren't cut off when zooming
+- And much more...
 
 ### ☕ Buy Me a Coffee!
 
