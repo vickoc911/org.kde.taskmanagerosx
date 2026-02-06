@@ -34,7 +34,7 @@ PlasmoidItem {
 
     readonly property bool shouldShrinkToZero: tasksModel.count === 0
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
-    readonly property bool iconsOnly: Plasmoid.pluginName === "org.kde.taskmanagerosx"
+    readonly property bool iconsOnly: Plasmoid.pluginName === "org.kde.plasma.wavetask"
 
     property Task toolTipOpenedByClick
     property Task toolTipAreaItem
@@ -441,45 +441,46 @@ PlasmoidItem {
                     top: parent.top
                 }
 
+
+                // 1. Definimos un ancho base para cada icono (puedes ajustar el 48)
+                readonly property int cellWidth: 60
+
                 readonly property real widthOccupation: taskRepeater.count / columns
                 readonly property real heightOccupation: taskRepeater.count / rows
 
+                // 2. Forzamos que el ancho máximo sea simplemente: (iconos * ancho base)
                 Layout.maximumWidth: {
-                    const totalMaxWidth = children.reduce((accumulator, child) => {
-                            if (!isFinite(child.Layout.maximumWidth)) {
-                                return accumulator;
-                            }
-                            return accumulator + child.Layout.maximumWidth
-                        }, 0);
-                    return Math.round(totalMaxWidth / widthOccupation);
+                    if (tasks.vertical) return tasks.width;
+                    // Esto asegura que el Layout nunca pida más espacio del necesario para estar "juntitos"
+                    return (taskRepeater.count * cellWidth);
                 }
+
                 Layout.maximumHeight: {
                     const totalMaxHeight = children.reduce((accumulator, child) => {
-                            if (!isFinite(child.Layout.maximumHeight)) {
-                                return accumulator;
-                            }
-                            return accumulator + child.Layout.maximumHeight
-                        }, 0);
+                        if (!isFinite(child.Layout.maximumHeight)) return accumulator;
+                        return accumulator + child.Layout.maximumHeight
+                    }, 0);
                     return Math.round(totalMaxHeight / heightOccupation);
                 }
+
+                // 3. Ajustamos el ancho real para que no se estire
                 width: {
-                    if (tasks.shouldShrinkToZero) {
-                        return 0;
-                    }
+                    if (tasks.shouldShrinkToZero) return 0;
                     if (tasks.vertical) {
                         return tasks.width * Math.min(1, widthOccupation);
                     } else {
+                        // Retornamos el ancho justo para que estén pegados
                         return Math.min(tasks.width, Layout.maximumWidth);
                     }
                 }
+
                 height: {
-                    if (tasks.shouldShrinkToZero) {
-                        return 0;
-                    }
+                    if (tasks.shouldShrinkToZero) return 0;
                     if (tasks.vertical) {
                         return Math.min(tasks.height, Layout.maximumHeight);
                     } else {
-                        return tasks.height * Math.min(1, heightOccupation);
+                        // Mantenemos el alto del panel (90px) para permitir el zoom y reflejo
+                        return tasks.height;
                     }
                 }
 
