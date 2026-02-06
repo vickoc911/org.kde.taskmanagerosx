@@ -1,5 +1,6 @@
-# org.kde.taskmanagerosx
-I haven't uploaded the code yet. This is still the default task manager for KDE 6.5.
+# org.kde.wavetask
+It still has many bugs, but it more or less works. It's based on the default task manager of KDE 6.5.
+
 ### ☕ Buy Me a Coffee!
 
 If this code helped you, your support allows me to continue maintenance.
