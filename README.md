@@ -13,6 +13,8 @@ Features:
 - Zoom like in macOS
 - Icon mirroring
 - Basic skin system
+- Option to select the icon size
+- option to select the zoom size
 
 What doesn't work:
 - For now, it only works in the bottom position
