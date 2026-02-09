@@ -157,6 +157,12 @@
       <label> Skin.</label>
       <default>default</default>
     </entry>
+    <entry name="iconSize" type="Int">
+      <default>44</default>
+    </entry>
+    <entry name="magnification" type="Double">
+      <default>50.0</default>
+    </entry>
   </group>
 
 </kcfg>
