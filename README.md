@@ -5,7 +5,7 @@ How to install:
 - First install the panel layout, which you can download from: https://github.com/vickoc911/org.kde.desktop.PanelZoom
 - Download the code
 - Unzip and rename the folder to org.kde.plasma.wavetask
-- Copy the org.kde.plasma.wavetask folder to /home/victor/.local/share/plasma/plasmoids/
+- Copy the org.kde.plasma.wavetask folder to /home/yourusername/.local/share/plasma/plasmoids/
 - That's it.
 
 Features:
