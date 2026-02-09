@@ -445,7 +445,7 @@ PlasmoidItem {
 
             visible: false
 
-            imagePath: "widgets/tasks"
+            imagePath: tasks.skinParams.imagetask
             prefix: TaskTools.taskPrefix("normal", Plasmoid.location)
         }
 

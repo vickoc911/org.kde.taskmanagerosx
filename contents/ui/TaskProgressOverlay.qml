@@ -37,7 +37,7 @@ T.ProgressBar {
             width: parent.width * control.position
             height: parent.height
 
-            imagePath: "widgets/tasks"
+            imagePath: tasks.skinParams.imagetask
             prefix: TaskTools.taskPrefix("progress", Plasmoid.location).concat(TaskTools.taskPrefix("hover", Plasmoid.location))
         }
     }
