@@ -167,7 +167,7 @@ KCMUtils.SimpleKCM {
         }
         // --- Selector de Tamaño de Iconos ---
         RowLayout {
-            Kirigami.FormData.label: "icon size:"
+            Kirigami.FormData.label: "Icon Size:"
             spacing: Kirigami.Units.smallSpacing
 
             QQC2.Slider {
@@ -192,7 +192,7 @@ KCMUtils.SimpleKCM {
         }
         // --- Selector de Tamaño de Zoom ---
         RowLayout {
-            Kirigami.FormData.label: "Magnification:"
+            Kirigami.FormData.label: "Zoom Percentage:"
             spacing: Kirigami.Units.smallSpacing
 
             QQC2.Slider {

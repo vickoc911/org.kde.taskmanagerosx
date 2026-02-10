@@ -48,79 +48,81 @@ PlasmoidItem {
 
     preferredRepresentation: fullRepresentation
 
-    // --- LÓGICA DE TRANSPARENCIA ---
-    property Item containmentItem: null
-    readonly property int depth: 14
-    property bool isBackgroundDisabled: true
+   // Plasmoid.constraintHints: Plasmoid.CanFillArea
 
-    function lookForContainer(object, tries) {
-        if (tries === 0 || object === null) return;
-        // Esta es la línea clave que dijiste que funciona
-        if (object.toString().indexOf("ContainmentItem_QML") > -1) {
-            tasks.containmentItem = object;
-            console.log("Contenedor encontrado en el intento: " + (depth - tries));
-        } else {
-            lookForContainer(object.parent, tries - 1);
-        }
-    }
+   // --- LÓGICA DE TRANSPARENCIA ---
+   property Item containmentItem: null
+   readonly property int depth: 14
+   property bool isBackgroundDisabled: true
 
-    function applyBackgroundHint() {
-        if (tasks.containmentItem === null) lookForContainer(tasks.parent, depth);
-        if (tasks.containmentItem === null) return;
+   function lookForContainer(object, tries) {
+       if (tries === 0 || object === null) return;
+       // Esta es la línea clave que dijiste que funciona
+       if (object.toString().indexOf("ContainmentItem_QML") > -1) {
+           tasks.containmentItem = object;
+           console.log("Contenedor encontrado en el intento: " + (depth - tries));
+       } else {
+           lookForContainer(object.parent, tries - 1);
+       }
+   }
 
-        // Aplicamos el NoBackground (0) o Default (1)
-        tasks.containmentItem.Plasmoid.backgroundHints = (isBackgroundDisabled) ? 0 : 1;
+   function applyBackgroundHint() {
+       if (tasks.containmentItem === null) lookForContainer(tasks.parent, depth);
+       if (tasks.containmentItem === null) return;
 
-        // También lo aplicamos al objeto raíz por si acaso
-        tasks.Plasmoid.backgroundHints = (isBackgroundDisabled) ? 0 : 1;
-    }
+       // Aplicamos el NoBackground (0) o Default (1)
+       tasks.containmentItem.Plasmoid.backgroundHints = (isBackgroundDisabled) ? 0 : 1;
 
-    // --- LÓGICA DE SKINS ---
-    property var skinParams: ({
-        image: "", imagetask: "",
-        left: 0, top: 0, right: 0, bottom: 0,
-        outLeft: 0, outTop: 0, outRight: 0, outBottom: 0
-    })
+       // También lo aplicamos al objeto raíz por si acaso
+       tasks.Plasmoid.backgroundHints = (isBackgroundDisabled) ? 0 : 1;
+   }
 
-    function loadSkinConfig() {
-        let skinName = Plasmoid.configuration.skinName || "default";
-        // Construimos la ruta al nuevo archivo Config.qml
-        let configUrl = Qt.resolvedUrl("../skins/" + skinName + "/Config.qml");
+   // --- LÓGICA DE SKINS ---
+   property var skinParams: ({
+       image: "", imagetask: "",
+       left: 0, top: 0, right: 0, bottom: 0,
+       outLeft: 0, outTop: 0, outRight: 0, outBottom: 0
+   })
 
-        console.log("Cargando configuración de skin desde: " + configUrl);
+   function loadSkinConfig() {
+       let skinName = Plasmoid.configuration.skinName || "default";
+       // Construimos la ruta al nuevo archivo Config.qml
+       let configUrl = Qt.resolvedUrl("../skins/" + skinName + "/Config.qml");
 
-        let component = Qt.createComponent(configUrl);
+       console.log("Cargando configuración de skin desde: " + configUrl);
 
-        if (component.status === Component.Ready) {
-            let config = component.createObject(tasks); // 'tasks' es el id de tu PlasmoidItem
+       let component = Qt.createComponent(configUrl);
 
-            if (config) {
-                let skinFolderUrl = Qt.resolvedUrl("../skins/" + skinName + "/").toString();
+       if (component.status === Component.Ready) {
+           let config = component.createObject(tasks); // 'tasks' es el id de tu PlasmoidItem
 
-                // Actualizamos skinParams de forma reactiva
-                tasks.skinParams = {
-                    image: skinFolderUrl + config.image,
-                    imagetask: skinFolderUrl + config.imagetask,
-                    left: config.leftMargin,
-                    top: config.topMargin,
-                    right: config.rightMargin,
-                    bottom: config.bottomMargin,
-                    outLeft: config.outsideLeftMargin,
-                    outTop: config.outsideTopMargin,
-                    outRight: config.outsideRightMargin,
-                    outBottom: config.outsideBottomMargin
-                };
+           if (config) {
+               let skinFolderUrl = Qt.resolvedUrl("../skins/" + skinName + "/").toString();
 
-                console.log("EXITO: Skin '" + skinName + "' cargada. Imagen: " + tasks.skinParams.image);
+               // Actualizamos skinParams de forma reactiva
+               tasks.skinParams = {
+                   image: skinFolderUrl + config.image,
+                   imagetask: skinFolderUrl + config.imagetask,
+                   left: config.leftMargin,
+                   top: config.topMargin,
+                   right: config.rightMargin,
+                   bottom: config.bottomMargin,
+                   outLeft: config.outsideLeftMargin,
+                   outTop: config.outsideTopMargin,
+                   outRight: config.outsideRightMargin,
+                   outBottom: config.outsideBottomMargin
+               };
 
-                // Limpiamos el objeto temporal de memoria
-                config.destroy();
-            }
-        } else {
-            console.log("ERROR al cargar Config.qml: " + component.errorString());
-            // Fallback: Si no existe el .qml, podrías intentar cargar valores por defecto aquí
-        }
-    }
+               console.log("EXITO: Skin '" + skinName + "' cargada. Imagen: " + tasks.skinParams.image);
+
+               // Limpiamos el objeto temporal de memoria
+               config.destroy();
+           }
+       } else {
+           console.log("ERROR al cargar Config.qml: " + component.errorString());
+           // Fallback: Si no existe el .qml, podrías intentar cargar valores por defecto aquí
+       }
+   }
 
     Plasmoid.onUserConfiguringChanged: {
         if (Plasmoid.userConfiguring && groupDialog !== null) {
@@ -301,8 +303,6 @@ PlasmoidItem {
             launcherList = Plasmoid.configuration.launchers;
             groupingAppIdBlacklist = Plasmoid.configuration.groupingAppIdBlacklist;
             groupingLauncherUrlBlacklist = Plasmoid.configuration.groupingLauncherUrlBlacklist;
-            // hacer panel transparente
-            applyBackgroundHint();
 
             // Only hook up view only after the above churn is done.
             taskRepeater.model = tasksModel;
@@ -403,15 +403,6 @@ PlasmoidItem {
 
         Connections {
             target: Plasmoid.configuration
-
-            function onSkinNameChanged() {
-                console.log("Nueva skin detectada: " + Plasmoid.configuration.skinName);
-                loadSkinConfig(); // La función que lee el .ini y carga la imagen
-            }
-
-            function onConfigurationChanged() {
-                loadSkinConfig();
-            }
 
             function onLaunchersChanged(): void {
                 tasksModel.launcherList = Plasmoid.configuration.launchers
@@ -515,13 +506,13 @@ PlasmoidItem {
             horizontalTileMode: BorderImage.Stretch
             verticalTileMode: BorderImage.Stretch
             z: -1
-         /*   onStatusChanged: {
-                if (status === BorderImage.Error) {
-                    console.log("ERROR QML: No se pudo cargar la imagen desde: " + source);
-                } else if (status === BorderImage.Ready) {
-                    console.log("EXITO: Imagen de fondo aplicada correctamente.");
-                }
-            } */
+            /*   onStatusChanged: {
+             *       if (status === BorderImage.Error) {
+             *           console.log("ERROR QML: No se pudo cargar la imagen desde: " + source);
+        } else if (status === BorderImage.Ready) {
+            console.log("EXITO: Imagen de fondo aplicada correctamente.");
+        }
+        } */
         }
 
         TriangleMouseFilter {
@@ -553,58 +544,13 @@ PlasmoidItem {
 
             anchors.centerIn: parent // Esto centra el Dock en el panel
 
-
-            // Cambiamos el tipo a Item para que nos deje mover los X manualmente
-            Item {
+            TaskList {
                 id: taskList
-                //   anchors.centerIn: parent // Esto centra el Dock en el panel
 
-                // Optimizado: Solo se actualiza cuando el repeater termina o cambia el conteo
-                /*     width: taskRepeater.count * (76)  // 76 altura del panel
-                 *           height: tasks.height
-                 *
-                 *           Layout.preferredWidth: {
-                 *               let total = 0;
-                 *               for (let i = 0; i < taskRepeater.count; ++i) {
-                 *                   let item = taskRepeater.itemAt(i);
-                 *                   if (item) total += item.width;
-            }
-            return total + 10;
-            } */
-                /*  width: {
-                 *         let total = 20; // Margen inicial/final
-                 *         for (let i = 0; i < taskRepeater.count; ++i) {
-                 *             let item = taskRepeater.itemAt(i);
-                 *             if (item) total += item.width;
-            }
-            return total;
-            } */
-                /*  width: {
-                 *           let total = 0;
-                 *           for (let i = 0; i < taskRepeater.count; ++i) {
-                 *               let item = taskRepeater.itemAt(i);
-                 *               if (item) total += item.width;
-            }
-            return total + 16;
-            } */
-
-                // Añade esto justo debajo de width para suavizar el estiramiento del panel
-                /*  Behavior on width {
-                 *           NumberAnimation {
-                 *               duration: 150
-                 *               easing.type: Easing.OutCubic
-            }
-            } */
-
-                //  height: tasks.height
-
-                // Informamos a Plasma que el tamaño ha cambiado para que estire el fondo
-                //  Layout.preferredWidth: width
-                //    Layout.maximumWidth: width
-                // IMPORTANTE: Esto centra el dock en el panel de Plasma
-                //  anchors.horizontalCenter: parent.horizontalCenter
-
-                // main.qml
+                anchors {
+                    left: parent.left
+                    top: parent.top
+                }
 
                 width: taskRepeater.count * (Plasmoid.configuration.iconSize +  22)  // 10 menos que la  altura del panel
                 height: tasks.height
@@ -623,6 +569,12 @@ PlasmoidItem {
                 readonly property real centerOffset: (width - iconsTotalWidth) / 2
 
                 Layout.maximumWidth: width
+
+                onAnimatingChanged: {
+                    if (!animating) {
+                        tasks.publishIconGeometries(children, tasks);
+                    }
+                }
 
                 // 1. Este es el MouseArea que detecta el movimiento en todo el dock
                 MouseArea {
@@ -687,32 +639,6 @@ PlasmoidItem {
                     }
                 }
             } // Fin de taskList (Item)
-
-            /*  MouseArea {
-             *       id: dockMouseArea
-             *       anchors.fill: taskList
-             *       hoverEnabled: true
-             *       z: 999
-             *       propagateComposedEvents: true
-             *
-             *       onPositionChanged: (mouse) => {
-             *           // childAt busca qué icono está bajo el mouse en esa X
-             *         //  var targetTask = taskList.childAt(mouse.x, mouse.y);
-             *         //  if (targetTask && targetTask.updateMainItemBindings) {
-             *          //     targetTask.updateMainItemBindings();
-             *         //  }
-        }
-
-        onExited: {
-        if (tasks.toolTipAreaItem) {
-            tasks.toolTipAreaItem.hideToolTip();
-        }
-        }
-
-        onPressed: (mouse) => { mouse.accepted = false }
-        onReleased: (mouse) => { mouse.accepted = false }
-        onClicked: (mouse) => { mouse.accepted = false }
-        } */
         }
     }
 
@@ -787,7 +713,7 @@ PlasmoidItem {
     Timer {
         id: initializeAppletTimer
         interval: 1200
-        repeat: true // Lo hacemos repetir hasta que encuentre el contenedor
+        repeat: false // Lo hacemos repetir hasta que encuentre el contenedor
         running: true
 
         property int step: 0

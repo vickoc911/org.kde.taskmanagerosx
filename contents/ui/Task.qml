@@ -74,17 +74,17 @@ PlasmaCore.ToolTipArea {
     readonly property bool playingAudio: hasAudioStream && audioStreams.some(item => !item.corked)
     readonly property bool muted: hasAudioStream && audioStreams.every(item => item.muted)
 
+    readonly property bool highlighted: (inPopup && activeFocus) || (!inPopup && containsMouse)
+        || (task.contextMenu && task.contextMenu.status === PlasmaExtras.Menu.Open)
+        || (!!tasksRoot.groupDialog && tasksRoot.groupDialog.visualParent === task)
+
     // Esta propiedad la activamos desde el MouseArea del main.qml
     property bool isHovered: false
 
     property Item dockRef: null // Esto recibirá el 'dockMouseArea' de main.qml
 
-    readonly property bool highlighted: (inPopup && activeFocus) || (!inPopup && containsMouse)
-    || (task.contextMenu && task.contextMenu.status === PlasmaExtras.Menu.Open)
-    || (!!tasksRoot.groupDialog && tasksRoot.groupDialog.visualParent === task)
-
     active: !inPopup && !tasksRoot.groupDialog && task.contextMenu?.status !== PlasmaExtras.Menu.Open
-    interactive: false
+    interactive: model.IsWindow || mainItem.playerData
     location: Plasmoid.location
     mainItem: !Plasmoid.configuration.showToolTips || !model.IsWindow ? pinnedAppToolTipDelegate : openWindowToolTipDelegate
 
@@ -100,7 +100,7 @@ PlasmaCore.ToolTipArea {
     // ---------------------------------------------------------
     property real zoomFactor: {
         // Si no hay referencia al dock o el mouse no está sobre el dock, reset a 1.0
-        if (!dockRef || !dockRef.containsMouse) return 1.0;
+        if (!dockRef || !dockRef.containsMouse) return 1.1;
 
         // Calculamos la posición X del centro de este icono relativa al dock entero
         // Importante: usamos 'task' (el ID del ToolTipArea) para mapear
@@ -110,7 +110,7 @@ PlasmaCore.ToolTipArea {
         let distance = Math.abs(mouseXInDock - centerInDock);
 
         // Si el mouse está a más de 180px, no hay efecto
-        if (distance > 180) return 1.0;
+       // if (distance > 180) return 1.0;
 
         // Curva de Gauss para el efecto tipo Mac
         let amplitude = (Plasmoid.configuration.magnification || 1) / 100;
@@ -124,14 +124,10 @@ PlasmaCore.ToolTipArea {
     // Mantenemos el Behavior para que la transición al salir del dock sea suave
     Behavior on zoomFactor {
         NumberAnimation {
-            duration: 150
+            duration: 190
             easing.type: Easing.OutCubic
         }
     }
-
-    // ---------------------------------------------------------
-    // FIN DE LÓGICA
-    // ---------------------------------------------------------
 
     onXChanged: {
         if (!completed) {
@@ -141,10 +137,10 @@ PlasmaCore.ToolTipArea {
             oldX = x;
             return;
         }
-        moveAnim.x = oldX - x + translateTransform.x;
-        moveAnim.y = translateTransform.y;
+       // moveAnim.x = oldX - x + translateTransform.x;
+      //  moveAnim.y = translateTransform.y;
         oldX = x;
-        moveAnim.restart();
+      //  moveAnim.restart();
     }
     onYChanged: {
         if (!completed) {
@@ -154,25 +150,25 @@ PlasmaCore.ToolTipArea {
             oldY = y;
             return;
         }
-        moveAnim.y = oldY - y + translateTransform.y;
-        moveAnim.x = translateTransform.x;
+       // moveAnim.y = oldY - y + translateTransform.y;
+      //  moveAnim.x = translateTransform.x;
         oldY = y;
-        moveAnim.restart();
+      //  moveAnim.restart();
     }
 
     property real oldX: -1
     property real oldY: -1
-    SequentialAnimation {
+   /* SequentialAnimation {
         id: moveAnim
         property real x
         property real y
-       /* onRunningChanged: {
+        onRunningChanged: {
             if (running) {
-                ++task.parent.animationsRunning;
+           //     ++task.parent.animationsRunning;
             } else {
-                --task.parent.animationsRunning;
+            //    --task.parent.animationsRunning;
             }
-        } */
+        }
         ParallelAnimation {
             NumberAnimation {
                 target: translateTransform
@@ -194,7 +190,7 @@ PlasmaCore.ToolTipArea {
     }
     transform: Translate {
         id: translateTransform
-    }
+    } */
 
     Accessible.name: model.display
     Accessible.description: {
@@ -245,11 +241,8 @@ PlasmaCore.ToolTipArea {
 
     onContainsMouseChanged: {
         if (containsMouse) {
-            // Ya NO usamos forceActiveFocus aquí.
-            // Solo actualizamos si el tooltip no está ya procesando un cambio
-            if (!task.toolTipOpen) {
-                task.updateMainItemBindings();
-            }
+          //  task.forceActiveFocus(Qt.MouseFocusReason);
+            task.updateMainItemBindings();
         } else {
             tasksRoot.toolTipOpenedByClick = null;
         }
@@ -393,17 +386,16 @@ PlasmaCore.ToolTipArea {
     }
 
     // Will also be called in activateTaskAtIndex(index)
-    // Will also be called in activateTaskAtIndex(index)
     function updateMainItemBindings(): void {
         if ((mainItem.parentTask === this && mainItem.rootIndex.row === index)
             || (tasksRoot.toolTipOpenedByClick === null && !active)
             || (tasksRoot.toolTipOpenedByClick !== null && tasksRoot.toolTipOpenedByClick !== this)) {
             return;
-            }
+        }
 
-            mainItem.blockingUpdates = (mainItem.isGroup !== model.IsGroupParent); // BUG 464597 Force unload the previous component
+        mainItem.blockingUpdates = (mainItem.isGroup !== model.IsGroupParent); // BUG 464597 Force unload the previous component
 
-            mainItem.parentTask = this;
+        mainItem.parentTask = this;
         mainItem.rootIndex = tasksModel.makeModelIndex(index, -1);
 
         mainItem.appName = Qt.binding(() => model.AppName);
@@ -522,7 +514,6 @@ PlasmaCore.ToolTipArea {
             rightMargin: ((inPopup || tasksRoot.vertical) && taskList.columns > 1) ? LayoutMetrics.iconMargin : 0
         }
 
-        // que lo lea del skin
         imagePath: tasks.skinParams.imagetask
         property bool isHovered: task.highlighted && Plasmoid.configuration.taskHoverEffect
         property string basePrefix: "normal"
@@ -598,7 +589,7 @@ PlasmaCore.ToolTipArea {
         scale: zoomFactor
         transformOrigin: Item.Bottom
 
-        z: 1
+        z: highlighted ? 100 : 1 // Asegura que el icono activo esté arriba pero no bloquee eventos
 
         asynchronous: true
         active: task.smartLauncherItem && task.smartLauncherItem.countVisible
@@ -709,7 +700,8 @@ PlasmaCore.ToolTipArea {
     PlasmaComponents3.Label {
         id: label
 
-        visible: (inPopup || !tasksRoot.iconsOnly) && zoomFactor > 1.05
+        visible: (inPopup || !iconsOnly && !model.IsLauncher
+            && (parent.width - iconBox.height - Kirigami.Units.smallSpacing) >= LayoutMetrics.spaceRequiredToShowText())
 
         anchors {
             fill: parent
@@ -793,16 +785,11 @@ PlasmaCore.ToolTipArea {
         if (!inPopup && !model.IsWindow) {
             taskInitComponent.createObject(task);
         }
-        // Forzamos la localización de Plasma al inicio
-        if (tasksRoot && tasksRoot.plasmoid) {
-            task.location = tasksRoot.plasmoid.location;
-        }
-
         completed = true;
     }
     Component.onDestruction: {
         if (moveAnim.running) {
-            (task.parent as TaskList).animationsRunning -= 1;
+      //      (task.parent as TaskList).animationsRunning -= 1;
         }
     }
 }
