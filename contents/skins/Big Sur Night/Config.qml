@@ -6,9 +6,9 @@ QtObject {
     property int leftMargin: 40
     property int topMargin: 10
     property int rightMargin: 40
-    property int bottomMargin: 14
-    property int outsideLeftMargin: 15
-    property int outsideTopMargin: 10
-    property int outsideRightMargin: 15
-    property int outsideBottomMargin: -12
+    property int bottomMargin: 10
+    property int outsideLeftMargin: 2
+    property int outsideTopMargin: 3
+    property int outsideRightMargin: 2
+    property int outsideBottomMargin: -16
 }
