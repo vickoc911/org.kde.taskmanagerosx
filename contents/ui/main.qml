@@ -594,12 +594,29 @@ PlasmoidItem {
 
                 // 1. Este es el MouseArea que detecta el movimiento en todo el dock
                 MouseArea {
-                    id: dockMouseArea  // <--- Asegúrate de que tenga este ID
+                    id: dockMouseArea
                     anchors.fill: parent
                     hoverEnabled: true
                     propagateComposedEvents: true
+
                     onPositionChanged: (mouse) => {
+                        // Buscamos qué icono está bajo el ratón usando childAt
+                        let item = taskList.childAt(mouse.x, mouse.y);
+
+                        // Si el item encontrado es un Task y es distinto al actual
+                        if (item && item.isHovered !== undefined && tasks.toolTipAreaItem !== item) {
+                            // Solo cambiamos si es un icono nuevo para evitar parpadeos
+                            tasks.toolTipAreaItem = item;
+                            item.isHovered = true;
+                        }
+
+                        // No aceptamos el evento para que el zoom (en Task.qml)
+                        // y los clics sigan funcionando
                         mouse.accepted = false;
+                    }
+
+                    onExited: {
+                        tasks.toolTipAreaItem = null;
                     }
 
                     Repeater {
@@ -624,34 +641,7 @@ PlasmoidItem {
                             }
 
                             width: (Plasmoid.configuration.iconSize * zoomFactor) + 16
-
-                            // main.qml -> Repeater -> delegate: Task
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                propagateComposedEvents: true
-
-                                onEntered: {
-                                    // RESET TOTAL: Apagamos el hover de todos antes de encender este
-                                    for (let i = 0; i < taskRepeater.count; ++i) {
-                                        let item = taskRepeater.itemAt(i);
-                                        if (item) item.isHovered = false;
-                                    }
-
-                                    taskItem.isHovered = true;
-                                    // Sincronizamos el item del tooltip
-                                    tasks.toolTipAreaItem = taskItem;
-                                }
-
-                                onExited: {
-                                    taskItem.isHovered = false;
-                                }
-
-                                // Si haces click, que pase el evento al icono
-                                onPressed: (mouse) => { mouse.accepted = false }
-                            }
                         }
-
                     }
                 }
             } // Fin de taskList (Item)
