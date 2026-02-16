@@ -131,6 +131,26 @@ PlasmoidItem {
        }
    }
 
+   // Detecta si entra zoom y si sale
+   readonly property bool isZoomActive: {
+       for (let i = 0; i < taskRepeater.count; ++i) {
+           let item = taskRepeater.itemAt(i);
+           // Si el zoomFactor es mayor a 1.0 (o un umbral mínimo como 1.01)
+           if (item && item.zoomFactor > 1.01) return true;
+       }
+       return false;
+   }
+
+   // Detectar el momento exacto de entrada y salida
+/*   onIsZoomActiveChanged: {
+       if (isZoomActive) {
+           console.log("🚀 El zoom ha ENTRADO en efecto");
+      } else {
+           console.log("🏠 El zoom ha TERMINADO (regresando al tamaño anterior)");
+           // Aquí regresas el fondo a su estado normal
+       }
+   } */
+
     Plasmoid.onUserConfiguringChanged: {
         if (Plasmoid.userConfiguring && groupDialog !== null) {
             groupDialog.visible = false;
@@ -492,43 +512,115 @@ PlasmoidItem {
             visible: false
         }
 
-        BorderImage {
-            id: dockBackground
-            asynchronous: false
-            //   cache: true
-            visible: source.toString() !== "" // Solo visible si hay imagen
-            opacity: 1.0
+        Loader {
+            id: backgroundLoader
 
-            anchors {
-                fill: parent
-                // Aplicamos los márgenes EXTERIORES del .ini
-                leftMargin: tasks.skinParams.outLeft
-                topMargin: tasks.skinParams.outTop
-                rightMargin: tasks.skinParams.outRight
-                bottomMargin: tasks.skinParams.outBottom
-            }
-
-            // Imagen dinámica del skin
-            source: tasks.skinParams.image
-
-            // Márgenes INTERIORES para el estiramiento (BorderImage)
-            border {
-                left: tasks.skinParams.left
-                top: tasks.skinParams.top
-                right: tasks.skinParams.right
-                bottom: tasks.skinParams.bottom
-            }
-
-            horizontalTileMode: BorderImage.Stretch
-            verticalTileMode: BorderImage.Stretch
-            z: -1
-            /*   onStatusChanged: {
-             *       if (status === BorderImage.Error) {
-             *           console.log("ERROR QML: No se pudo cargar la imagen desde: " + source);
-        } else if (status === BorderImage.Ready) {
-            console.log("EXITO: Imagen de fondo aplicada correctamente.");
+            anchors.fill: parent
+            sourceComponent: (Plasmoid.configuration.skinName === "default") ? defaultSkin : customSkin
         }
-        } */
+
+        // --- Componente 1: DEFAULT (SVG) ---
+        Component {
+            id: defaultSkin
+            Item {
+                id: internalCanvas
+
+                // Definimos cuánto queremos que crezca el fondo lateralmente
+                readonly property int expansionAmount: tasks.isZoomActive ? 74 : 0
+
+                // 2. CAPA DE FONDO
+                KSvg.FrameSvgItem {
+                    id: backgroundItem
+                    imagePath: "widgets/panel-background"
+                    prefix: ""
+                    z: -1
+
+                    // Altura (Tu lógica original)
+                    height: (Plasmoid.configuration.iconSize < 48) ? taskList.height - (shadowItem.margins.top + 6) : taskList.height - (shadowItem.margins.top - 4)
+                    y: (Plasmoid.configuration.iconSize < 48) ? shadowItem.margins.top + 6 : shadowItem.margins.top - 4
+
+                    // --- ANCHO Y POSICIÓN DINÁMICA ---
+                    width: (taskList.width - 56) + internalCanvas.expansionAmount
+                    x: 28 - (internalCanvas.expansionAmount / 2)
+
+                    // Animaciones para suavizar el estiramiento
+                    Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+                    // Respetamos los hints del SVG
+                    anchors.leftMargin: shadowItem.margins.left
+                    anchors.topMargin: shadowItem.margins.top
+                    anchors.rightMargin: shadowItem.margins.right
+                    anchors.bottomMargin: shadowItem.margins.bottom
+                }
+
+                // 1. CAPA DE SOMBRA
+                KSvg.FrameSvgItem {
+                    id: shadowItem
+                    imagePath: "widgets/panel-background"
+                    prefix: "shadow"
+                    z: -2
+
+                    // Altura (Tu lógica original)
+                    height: (Plasmoid.configuration.iconSize < 48) ? taskList.height + (shadowItem.margins.top - 6) : taskList.height + (shadowItem.margins.top + 4)
+                    y: (Plasmoid.configuration.iconSize < 48) ? 6 : -4
+
+                    // --- ANCHO Y POSICIÓN DE SOMBRA DINÁMICA ---
+                    width: (taskList.width - 32) + internalCanvas.expansionAmount
+                    x: 16 - (internalCanvas.expansionAmount / 2)
+
+                    // Animaciones para que la sombra siga al fondo suavemente
+                    Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                }
+            }
+        }
+
+        // --- Componente 2: CUSTOM (Imagen) ---
+        Component {
+            id: customSkin
+            BorderImage {
+                id: dockBackground
+                asynchronous: false
+                visible: source.toString() !== ""
+                opacity: 1.0
+
+                // 1. Definimos propiedades para animar los laterales
+                // Si hay zoom, restamos un valor (ej. 20px) para que el fondo se extienda
+                property int dynamicLeftMargin: tasks.isZoomActive ? (tasks.skinParams.outLeft - 26) : tasks.skinParams.outLeft
+                property int dynamicRightMargin: tasks.isZoomActive ? (tasks.skinParams.outRight - 26) : tasks.skinParams.outRight
+
+                anchors {
+                    fill: parent
+                    topMargin: tasks.skinParams.outTop
+                    bottomMargin: tasks.skinParams.outBottom
+
+                    // 2. Vinculamos las anclas a nuestras propiedades dinámicas
+                    leftMargin: dockBackground.dynamicLeftMargin
+                    rightMargin: dockBackground.dynamicRightMargin
+                }
+
+                // 3. Animamos ambos márgenes para un efecto suave de expansión
+                Behavior on dynamicLeftMargin {
+                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                }
+                Behavior on dynamicRightMargin {
+                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                }
+
+                source: tasks.skinParams.image
+
+                border {
+                    left: tasks.skinParams.left
+                    top: tasks.skinParams.top
+                    right: tasks.skinParams.right
+                    bottom: tasks.skinParams.bottom
+                }
+
+                horizontalTileMode: BorderImage.Stretch
+                verticalTileMode: BorderImage.Stretch
+                z: -1
+            }
         }
 
         TriangleMouseFilter {
@@ -568,7 +660,7 @@ PlasmoidItem {
                     top: parent.top
                 }
 
-                width: taskRepeater.count * (Plasmoid.configuration.iconSize +  22)  // 10 menos que la  altura del panel
+                width: taskRepeater.count * (Plasmoid.configuration.iconSize +  12)  // 10 menos que la  altura del panel
                 height: tasks.height
 
                 // 2. Calculamos el ancho real de todos los iconos sumados
@@ -640,7 +732,7 @@ PlasmoidItem {
                                 return posX;
                             }
 
-                            width: (Plasmoid.configuration.iconSize * zoomFactor) + 16
+                            width: (Plasmoid.configuration.iconSize * zoomFactor) + 6
                         }
                     }
                 }

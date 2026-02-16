@@ -115,7 +115,7 @@ PlasmaCore.ToolTipArea {
         // Curva de Gauss para el efecto tipo Mac
         let amplitude = (Plasmoid.configuration.magnification || 0) / 100;
         if (amplitude === 0) return 1.0;
-        let sigma = 60;      // Qué tan ancho es el grupo de iconos que se agrandan
+        let sigma = 70;      // Qué tan ancho es el grupo de iconos que se agrandan
 
         let gauss = amplitude * Math.exp(-(Math.pow(distance, 2) / (2 * Math.pow(sigma, 2))));
 
@@ -125,7 +125,7 @@ PlasmaCore.ToolTipArea {
     // Mantenemos el Behavior para que la transición al salir del dock sea suave
     Behavior on zoomFactor {
         NumberAnimation {
-            duration: 190
+            duration: 200
             easing.type: Easing.OutCubic
         }
     }
@@ -621,9 +621,6 @@ PlasmaCore.ToolTipArea {
             // usamos para asegurar rendimiento
             smooth: true
             antialiasing: true
-
-            // Esto ayuda a que Plasma no re-renderice innecesariamente
-            active: task.highlighted
             source: model.decoration
 
             anchors.horizontalCenter: parent.horizontalCenter
