@@ -125,7 +125,7 @@ PlasmaCore.ToolTipArea {
     // Mantenemos el Behavior para que la transición al salir del dock sea suave
     Behavior on zoomFactor {
         NumberAnimation {
-            duration: 200
+            duration: 150
             easing.type: Easing.OutCubic
         }
     }

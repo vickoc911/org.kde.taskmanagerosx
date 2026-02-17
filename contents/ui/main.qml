@@ -660,7 +660,7 @@ PlasmoidItem {
                     top: parent.top
                 }
 
-                width: taskRepeater.count * (Plasmoid.configuration.iconSize +  12)  // 10 menos que la  altura del panel
+                width: taskRepeater.count * (Plasmoid.configuration.iconSize +  14)  // 10 menos que la  altura del panel
                 height: tasks.height
 
                 // 2. Calculamos el ancho real de todos los iconos sumados
