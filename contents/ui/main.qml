@@ -626,7 +626,7 @@ PlasmoidItem {
         TriangleMouseFilter {
             id: tmf
             filterTimeOut: 300
-            active: tasks.toolTipAreaItem && tasks.toolTipAreaItem.toolTipOpen
+            active: false
             blockFirstEnter: false
 
             edge: {
@@ -660,7 +660,7 @@ PlasmoidItem {
                     top: parent.top
                 }
 
-                width: taskRepeater.count * (Plasmoid.configuration.iconSize +  14)  // 10 menos que la  altura del panel
+                width: taskRepeater.count * (Plasmoid.configuration.iconSize +  12)  // 10 menos que la  altura del panel
                 height: tasks.height
 
                 // 2. Calculamos el ancho real de todos los iconos sumados
@@ -684,32 +684,55 @@ PlasmoidItem {
                     }
                 }
 
+                Item {
+                    id: dockContainer
+                    // El contenedor ahora es un área estática que llena el filtro
+                    anchors.fill: parent
+
                 // 1. Este es el MouseArea que detecta el movimiento en todo el dock
                 MouseArea {
                     id: dockMouseArea
                     anchors.fill: parent
                     hoverEnabled: true
-                    propagateComposedEvents: true
+                    acceptedButtons: Qt.NoButton
 
+                    // Posición suavizada del mouse
+                    property real smoothMouseX: -1
+                    property bool insideDock: false
+
+                    // Suavizado de movimiento para evitar parpadeos
                     onPositionChanged: (mouse) => {
-                        // Buscamos qué icono está bajo el ratón usando childAt
-                        let item = taskList.childAt(mouse.x, mouse.y);
-
-                        // Si el item encontrado es un Task y es distinto al actual
-                        if (item && item.isHovered !== undefined && tasks.toolTipAreaItem !== item) {
-                            // Solo cambiamos si es un icono nuevo para evitar parpadeos
-                            tasks.toolTipAreaItem = item;
-                            item.isHovered = true;
+                        let mappedPos = mapToItem(tasks, mouse.x, mouse.y);
+                        if (smoothMouseX < 0) {
+                            smoothMouseX = mappedPos.x;
+                        } else {
+                            // Suavizado tipo “lerp” para movimiento fluido
+                            smoothMouseX = smoothMouseX + (mappedPos.x - smoothMouseX) * 0.3;
                         }
+                        insideDock = true;
+                    }
 
-                        // No aceptamos el evento para que el zoom (en Task.qml)
-                        // y los clics sigan funcionando
-                        mouse.accepted = false;
+                    onEntered: {
+                        insideDock = true;
                     }
 
                     onExited: {
-                        tasks.toolTipAreaItem = null;
+                        exitTimer.restart();
                     }
+
+                    Timer {
+                        id: exitTimer
+                        interval: 40
+                        repeat: false
+                        onTriggered: {
+                            if (!dockMouseArea.containsMouse) {
+                                dockMouseArea.insideDock = false;
+                                dockMouseArea.smoothMouseX = -1;
+                            }
+                        }
+                    }
+
+                    onPressed: (mouse) => { mouse.accepted = false }
 
                     Repeater {
                         id: taskRepeater
@@ -735,6 +758,7 @@ PlasmoidItem {
                             width: (Plasmoid.configuration.iconSize * zoomFactor) + 6
                         }
                     }
+                }
                 }
             } // Fin de taskList (Item)
         }

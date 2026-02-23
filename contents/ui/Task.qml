@@ -95,103 +95,42 @@ PlasmaCore.ToolTipArea {
     // Desactivamos el recorte para que el zoom y el reflejo "vuelen" fuera
     clip: false
 
+    readonly property real _baseSize: Plasmoid.configuration.iconSize
+    readonly property real _sigma: _baseSize * 1.8
+    readonly property real _amplitude: (Plasmoid.configuration.magnification || 0) / 100
+
     // ---------------------------------------------------------
     // INICIO DEL CÓDIGO ZOOM (OSX EFFECT)
     // ---------------------------------------------------------
+
     property real zoomFactor: {
-        // Si no hay referencia al dock o el mouse no está sobre el dock, reset a 1.0
-        if (!dockRef || !dockRef.containsMouse) return 1.0;
+        // Guardias de seguridad básicas
+        if (!dockRef || _amplitude <= 0) return 1.0;
 
-        // Calculamos la posición X del centro de este icono relativa al dock entero
-        // Importante: usamos 'task' (el ID del ToolTipArea) para mapear
-        let centerInDock = task.mapToItem(dockRef, Plasmoid.configuration.iconSize/2, 0).x;
+        if (!dockRef.insideDock) return 1.0;
 
-        let mouseXInDock = dockRef.mouseX;
-        let distance = Math.abs(mouseXInDock - centerInDock);
+        let mX = dockRef.smoothMouseX;
+        if (mX < 0) return 1.0;
 
-        // Si el mouse está a más de 180px, no hay efecto
-       // if (distance > 180) return 1.0;
+        // Distancia del mouse al centro del icono
+        let centerInDock = task.mapToItem(dockRef, _baseSize / 2, 0).x;
+        let distance = Math.abs(mX - centerInDock);
 
-        // Curva de Gauss para el efecto tipo Mac
-        let amplitude = (Plasmoid.configuration.magnification || 0) / 100;
-        if (amplitude === 0) return 1.0;
-        let sigma = 70;      // Qué tan ancho es el grupo de iconos que se agrandan
+        // Si el mouse está muy lejos, no escalamos
+        if (distance > _sigma * 3) return 1.0;
 
-        let gauss = amplitude * Math.exp(-(Math.pow(distance, 2) / (2 * Math.pow(sigma, 2))));
-
-        return 1.0 + gauss;
+        // Curva tipo Gauss para suavizado estilo Mac
+        //  return 1.0 + _amplitude * Math.exp(-Math.pow(distance / 1.2, 2) / (2 * Math.pow(_sigma, 2)));
+        return 1.0 + _amplitude * Math.exp(-(Math.pow(distance, 2) / (2 * Math.pow(_sigma, 2))));
     }
 
     // Mantenemos el Behavior para que la transición al salir del dock sea suave
     Behavior on zoomFactor {
         NumberAnimation {
-            duration: 150
+            duration: 200
             easing.type: Easing.OutCubic
         }
     }
-
-    onXChanged: {
-        if (!completed) {
-            return;
-        }
-        if (oldX < 0) {
-            oldX = x;
-            return;
-        }
-       // moveAnim.x = oldX - x + translateTransform.x;
-      //  moveAnim.y = translateTransform.y;
-        oldX = x;
-      //  moveAnim.restart();
-    }
-    onYChanged: {
-        if (!completed) {
-            return;
-        }
-        if (oldY < 0) {
-            oldY = y;
-            return;
-        }
-       // moveAnim.y = oldY - y + translateTransform.y;
-      //  moveAnim.x = translateTransform.x;
-        oldY = y;
-      //  moveAnim.restart();
-    }
-
-    property real oldX: -1
-    property real oldY: -1
-   /* SequentialAnimation {
-        id: moveAnim
-        property real x
-        property real y
-        onRunningChanged: {
-            if (running) {
-           //     ++task.parent.animationsRunning;
-            } else {
-            //    --task.parent.animationsRunning;
-            }
-        }
-        ParallelAnimation {
-            NumberAnimation {
-                target: translateTransform
-                properties: "x"
-                from: moveAnim.x
-                to: 0
-                easing.type: Easing.OutQuad
-                duration: Kirigami.Units.longDuration
-            }
-            NumberAnimation {
-                target: translateTransform
-                properties: "y"
-                from: moveAnim.y
-                to: 0
-                easing.type: Easing.OutQuad
-                duration: Kirigami.Units.longDuration
-            }
-        }
-    }
-    transform: Translate {
-        id: translateTransform
-    } */
 
     Accessible.name: model.display
     Accessible.description: {
