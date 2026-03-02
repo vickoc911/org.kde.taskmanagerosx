@@ -1,7 +1,12 @@
 # org.kde.plasma.wavetask
-It still has many bugs, but it more or less works. It's based on the default task manager of KDE 6.5.
+Task manager with OSX-style zoom. It's based on the default task manager of KDE 6.5.
 
-How to install:
+## Support for previous Plasma releases
+
+Currently supported versions: 6.5
+If you need to install it on Plasma 6.6, I recommend you do it from here: https://github.com/vickoc911/org.vicko.wavetask
+
+## How to install:
 - First install the panel layout, which you can download from: https://github.com/vickoc911/org.kde.desktop.PanelZoom
 - Download the code
 - Unzip and rename the folder to org.kde.plasma.wavetask
@@ -9,7 +14,7 @@ How to install:
 - Add the panel with wavetask
 - That's it.
 
-Features:
+## Features:
 
 - Zoom like in macOS
 - Icon mirroring
